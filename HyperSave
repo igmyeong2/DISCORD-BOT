@@ -1,0 +1,179 @@
+import discord
+from discord.ext import commands
+import asyncio
+import time
+import BCSFE_Python_Discord as BCSFE_Python
+from BCSFE_Python_Discord import *
+from BCSFE_Python_Discord import game_data_getter
+from discord.ui import View, Button
+from discord import ButtonStyle, Interaction
+from datetime import datetime
+
+intents = discord.Intents.all()
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+required_role_id = 1274254529818263581
+
+source_channel_id = 1274640900701556746  # 메시지를 감지할 채널 ID
+target_channel_id = 1274627424214192209
+
+class PersistentView(View):
+    def __init__(self):
+        super().__init__(timeout=None)  # View가 지속되도록 설정
+
+        # 버튼 정의 및 custom_id 설정
+        b1 = Button(label='확인했습니다.', style=ButtonStyle.secondary, custom_id='persistent_button')
+        b1.callback = self.button_callback  # 콜백 함수 연결
+        self.add_item(b1)
+
+    async def button_callback(self, interaction: Interaction):
+        role_id = 1274253653607317514  # 여기에 지급할 역할의 ID를 입력하세요.
+        role = interaction.guild.get_role(role_id)  # 역할 가져오기
+
+        if role:
+            await interaction.user.add_roles(role)  # 역할 추가
+            await interaction.response.send_message(content=f'{role.mention} 역할이 지급되었습니다.', ephemeral=True)
+        else:
+            await interaction.response.send_message(content='역할을 찾을 수 없습니다.', ephemeral=True)
+
+class perkView(View):
+    def __init__(self):
+        super().__init__(timeout=None)  # View가 지속되도록 설정
+
+        # 버튼 정의 및 custom_id 설정
+        b1 = Button(label='혜택', style=ButtonStyle.secondary, custom_id='persistent_button')
+        b1.callback = self.button_callback  # 콜백 함수 연결
+        self.add_item(b1)
+
+    async def button_callback(self, interaction: Interaction):
+        role_ids = {
+            "MVP": 1274254351036059649,
+            "SVIP": 1274254238251225098,
+            "VVIP": 1274254058437345291,
+            "VIP": 1274254004632686643,
+            "구매자": 1274253788386955335,
+        }
+
+        discounts = {
+            "MVP": 25,   # 25% 할인
+            "SVIP": 20,  # 20% 할인
+            "VVIP": 15,  # 15% 할인
+            "VIP": 10,   # 10% 할인
+            "구매자": 5,  # 5% 할인
+        }
+
+        colors = {
+            "MVP": 0xFF4500,   # 금색 (Gold)
+            "SVIP": 0xFF4500,  # 은색 (Silver)
+            "VVIP": 0xFFD700,  # 오렌지 (OrangeRed)
+            "VIP": 0xFFD700,   # 파랑 (DeepSkyBlue)
+            "구매자": 0x32CD32, # 초록 (LimeGreen)
+        }
+
+        guild = interaction.guild
+        roles = {
+            "MVP": guild.get_role(role_ids["MVP"]),
+            "SVIP": guild.get_role(role_ids["SVIP"]),
+            "VVIP": guild.get_role(role_ids["VVIP"]),
+            "VIP": guild.get_role(role_ids["VIP"]),
+            "구매자": guild.get_role(role_ids["구매자"]),
+        }
+
+        user_roles = interaction.user.roles
+        discount_message = "해당 유저는 지정된 역할이 없습니다."
+
+        for role_name in ["MVP", "SVIP", "VVIP", "VIP", "구매자"]:
+            role = roles[role_name]
+            if role and role in user_roles:
+                discount = discounts[role_name]
+                color = colors[role_name]
+
+                embed = discord.Embed(
+                    title="혜택 확인",
+                    description=f'{interaction.user.mention}님은 {role.mention} 역할이 있습니다!',
+                    color=color  # 각 역할별 색상 적용
+                )
+                embed.add_field(name="할인율", value=f'{discount}% 할인 적용됩니다.', inline=False)
+                break
+        else:
+            # 역할이 없는 경우의 임베드
+            embed = discord.Embed(
+                title="혜택 확인",
+                description="해당 유저는 지정된 역할이 없습니다.",
+                color=0xff0000  # 기본 색상 (레드)
+            )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+@bot.event
+async def on_ready():
+    bot.add_view(PersistentView())
+    bot.add_view(perkView())
+    print(f'봇이 로그인되었습니다. {bot.user}')
+
+@bot.event
+async def on_message(message: discord.Message):
+    # 봇 자신의 메시지나 다른 채널에서의 메시지는 무시합니다
+    if message.author == bot.user:
+        return
+
+    if message.channel.id == source_channel_id:
+        target_channel = bot.get_channel(target_channel_id)
+        if target_channel:
+
+            current_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+            embed = discord.Embed(
+                title="공지",
+                description=f'보낸 사람: {message.author.mention}',
+                color=0x565656
+            )
+            embed.add_field(name="메시지 내용", value=message.content, inline=False)
+            embed.set_footer(text=f'보낸 시간: {current_time}')
+
+
+            
+            await target_channel.send(embed=embed)
+        else:
+            print(f"채널 ID {target_channel_id}에 해당하는 채널을 찾을 수 없습니다.")
+
+    # 명령어 처리를 위한 필요 코드
+    await bot.process_commands(message)
+
+@bot.slash_command(name="규칙", description="규칙보내기")
+@commands.has_role(required_role_id)
+async def 규칙(ctx):
+    embed = discord.Embed(color=0x565656, title="가이드")
+    embed.add_field(name="입장 한 뒤", value="입장 후 계정 백업 채널로 이동 후 계정 백업을 진행해 줍니다. (기종변경)", inline=False)
+    embed.add_field(name="구매하는 법", value="백업을 하였다면 구매 채널로 가서 원하시는 옵션을 선택해 작업을 진행합니다.", inline=False)
+    embed.add_field(name="작업 진행 도중 발생한 오류", value="담당자에게 문의해주시면 재빠르게 계정을 복구해드립니다.", inline=False)
+    embed.add_field(name="문의", value="문의는 <#1274336346399313920> 여기를 클릭하여 원하는 문의주시면 됩니다.\n허위,장난 문의 시 1일 탐아", inline=False)
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1274252440782504029/1274330450403397652/DISCORD_GARIS.png?ex=66c1dc37&is=66c08ab7&hm=2cdeee1e63fac0fc5b22b7a40218b829a20eaaab78e6bd29548f52e8b48d1475&")
+    await ctx.send(embed=embed, view=PersistentView())
+
+@규칙.error
+async def 규칙_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        embed = discord.Embed(color=0x565656)
+        embed.add_field(name="에러", value="이 명령어는 특정 역할이 있는 사용자만 사용 가능합니다.", inline=False)
+        await ctx.respond(embed=embed, ephemeral=True)
+
+@bot.slash_command(guild_ids = [1272185394162831421], name="혜택", description="혜택확인하기")
+@commands.has_role(required_role_id)
+async def 혜택(ctx):
+    embed = discord.Embed(color=0x565656, title="혜택")
+    embed.add_field(name="", value="아래 버튼을 눌러 자신의 혜택을 확인하세요.", inline=False)
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1274252440782504029/1274330450403397652/DISCORD_GARIS.png?ex=66c1dc37&is=66c08ab7&hm=2cdeee1e63fac0fc5b22b7a40218b829a20eaaab78e6bd29548f52e8b48d1475&")
+    await ctx.send(embed=embed, view=perkView())
+
+@혜택.error
+async def 혜택_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        embed = discord.Embed(color=0x565656)
+        embed.add_field(name="에러", value="이 명령어는 특정 역할이 있는 사용자만 사용 가능합니다.", inline=False)
+        await ctx.respond(embed=embed, ephemeral=True)
+
+
+# 봇 실행 (토큰은 본인의 것으로 교체)
+bot.run('YOUR_TOKEN')
