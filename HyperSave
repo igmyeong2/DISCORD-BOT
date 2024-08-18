@@ -132,6 +132,8 @@ async def on_message(message: discord.Message):
             embed.add_field(name="메시지 내용", value=message.content, inline=False)
             embed.set_footer(text=f'보낸 시간: {current_time}')
 
+            await target_channel.send(content="@everyone", embed=embed)
+
 
             
             await target_channel.send(embed=embed)
@@ -174,6 +176,15 @@ async def 혜택_error(ctx, error):
         embed.add_field(name="에러", value="이 명령어는 특정 역할이 있는 사용자만 사용 가능합니다.", inline=False)
         await ctx.respond(embed=embed, ephemeral=True)
 
+@bot.slash_command(guild_ids = [1272185394162831421], name="도움말", description="도움말을 확인해요")
+async def 도움말(ctx):
+    embed = discord.Embed(color=0x565656, title="HYPER BC SAVE")
+    embed.add_field(name="도움말", value="Hyper BC SAVE 공식 디스코드봇 소개")
+    embed.add_field(name="명령어", value="**`/젠`** 특정 채널에서 이 명령어를 사용하면 디엠으로 랜덤 계정이 생성됩니다!", inline=False)
+    embed.set_footer(text = "명령어가 별로 없어 아쉬우신가요? 괜찮습니다! 봇은 매주 업데이트 되기 때문입니다.")
+    embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1274640900701556746/1274681576868806747/Purple_Modern_Software_Company_Logo_2.png?ex=66c3233a&is=66c1d1ba&hm=72d4bec963d02a1c1f3bde56f14025adc41667f0093e75c0a30dbc791df3f59c&")
+    await ctx.respond(embed=embed)
+
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
-bot.run('YOUR_TOKEN')
+bot.run('TOKEN')
