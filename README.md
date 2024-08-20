@@ -1,1 +1,2 @@
-# DISCORD-BOT
+# HYPER BC SAVE 소개
+`다양하고 재미있는 기능들이 여기서 만들어지고 있어요!`
