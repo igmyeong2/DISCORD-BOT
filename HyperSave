@@ -18,32 +18,37 @@ required_role_id = 1274254529818263581
 source_channel_id = 1274640900701556746  # 메시지를 감지할 채널 ID
 target_channel_id = 1274627424214192209
 
+class WarningCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
 class PersistentView(View):
     def __init__(self):
-        super().__init__(timeout=None)  # View가 지속되도록 설정
+        super().__init__(timeout=None)
 
-        # 버튼 정의 및 custom_id 설정
-        b1 = Button(label='확인했습니다.', style=ButtonStyle.secondary, custom_id='persistent_button')
-        b1.callback = self.button_callback  # 콜백 함수 연결
+        # 버튼 정의 및 custom_id 설정 (역할 지급 버튼)
+        b1 = Button(label='확인했습니다.', style=ButtonStyle.secondary, custom_id='role_grant_button')
+        b1.callback = self.button_callback
         self.add_item(b1)
 
     async def button_callback(self, interaction: Interaction):
-        role_id = 1274253653607317514  # 여기에 지급할 역할의 ID를 입력하세요.
-        role = interaction.guild.get_role(role_id)  # 역할 가져오기
+        role_id = 1274253653607317514  # 지급할 역할의 ID
+        role = interaction.guild.get_role(role_id)
 
         if role:
-            await interaction.user.add_roles(role)  # 역할 추가
+            await interaction.user.add_roles(role)
             await interaction.response.send_message(content=f'{role.mention} 역할이 지급되었습니다.', ephemeral=True)
         else:
             await interaction.response.send_message(content='역할을 찾을 수 없습니다.', ephemeral=True)
 
+
 class perkView(View):
     def __init__(self):
-        super().__init__(timeout=None)  # View가 지속되도록 설정
+        super().__init__(timeout=None)
 
-        # 버튼 정의 및 custom_id 설정
-        b1 = Button(label='혜택', style=ButtonStyle.secondary, custom_id='persistent_button')
-        b1.callback = self.button_callback  # 콜백 함수 연결
+        # 버튼 정의 및 custom_id 설정 (혜택 버튼)
+        b1 = Button(label='혜택', style=ButtonStyle.secondary, custom_id='perk_check_button')
+        b1.callback = self.button_callback
         self.add_item(b1)
 
     async def button_callback(self, interaction: Interaction):
@@ -187,4 +192,4 @@ async def 도움말(ctx):
 
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
-bot.run('TOKEN')
+bot.run('YOUR_TOKEN')
