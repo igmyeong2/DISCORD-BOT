@@ -8,6 +8,10 @@ from BCSFE_Python_Discord import game_data_getter
 from discord.ui import View, Button
 from discord import ButtonStyle, Interaction
 from datetime import datetime
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+import requests
+from io import BytesIO
+import sqlite3
 
 intents = discord.Intents.all()
 
@@ -17,6 +21,20 @@ required_role_id = 1274254529818263581
 
 source_channel_id = 1274640900701556746  # 메시지를 감지할 채널 ID
 target_channel_id = 1274627424214192209
+
+FONT_PATH = "C:\\Users\\USER1\\Downloads\\DiscordBot\\saves\\LINESeedKR-Bd.ttf"
+BACKGROUND_PATH = "C:\\Users\\USER1\\Downloads\\DiscordBot\\saves\\배경.png"
+
+conn = sqlite3.connect("user_data.db")
+c = conn.cursor()
+
+c.execute('''CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                level INTEGER,
+                xp INTEGER
+            )''')
+conn.commit()
 
 class WarningCog(commands.Cog):
     def __init__(self, bot):
@@ -186,9 +204,186 @@ async def 도움말(ctx):
     embed = discord.Embed(color=0x565656, title="HYPER BC SAVE")
     embed.add_field(name="도움말", value="Hyper BC SAVE 공식 디스코드봇 소개")
     embed.add_field(name="명령어", value="**`/젠`** 특정 채널에서 이 명령어를 사용하면 디엠으로 랜덤 계정이 생성됩니다!", inline=False)
+    embed.add_field(name="", value="**`/경험치`** 채팅 및 소통을 하여 레벨을 올릴 수 있습니다! ~~쉿~ 상품이 있을지 누가 알아요?~~", inline=False)
     embed.set_footer(text = "명령어가 별로 없어 아쉬우신가요? 괜찮습니다! 봇은 매주 업데이트 되기 때문입니다.")
     embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1274640900701556746/1274681576868806747/Purple_Modern_Software_Company_Logo_2.png?ex=66c3233a&is=66c1d1ba&hm=72d4bec963d02a1c1f3bde56f14025adc41667f0093e75c0a30dbc791df3f59c&")
     await ctx.respond(embed=embed)
+
+@bot.event
+async def on_member_join(member):
+    # 유저 정보 가져오기
+    username = member.name
+    user_id = member.id
+
+    # 유저가 데이터베이스에 없으면 추가
+    c.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO users (user_id, username, level, xp) VALUES (?, ?, 1, 0)", (user_id, username))
+        conn.commit()
+
+    # 프로필 사진 가져오기
+    avatar_url = member.avatar.url
+    response = requests.get(avatar_url)
+    avatar_img = Image.open(BytesIO(response.content)).convert("RGBA")
+    avatar_img = avatar_img.resize((100, 100))
+
+    mask = Image.new("L", avatar_img.size, 0)
+    draw_mask = ImageDraw.Draw(mask)
+    draw_mask.ellipse((0, 0, 100, 100), fill=255)  # 원형 마스크 그리기
+
+    avatar_img = ImageOps.fit(avatar_img, (100, 100), Image.LANCZOS)
+    avatar_img.putalpha(mask)
+
+    # 배경 이미지 불러오기
+    background = Image.open(BACKGROUND_PATH).convert("RGB")
+    draw = ImageDraw.Draw(background)
+    
+    # 글꼴 설정
+    font_large = ImageFont.truetype(FONT_PATH, 50)
+    font_small = ImageFont.truetype(FONT_PATH, 30)
+
+    # 상단 텍스트 추가 (환영 메시지)
+    draw.text((50, 20), "환영합니다!", font=font_large, fill=(255, 255, 255))
+
+    # 유저 정보 텍스트 추가 (이름, ID)
+    draw.text((170, 120), f"Name: {username}", font=font_small, fill=(255, 255, 255))
+    draw.text((170, 160), f"ID: {user_id}", font=font_small, fill=(255, 255, 255))
+
+    # 초기 경험치 및 레벨 텍스트 추가
+    draw.text((50, 270), "0 XP", font=font_small, fill=(255, 255, 255))
+
+    # 경험치 바 추가 (타원형 형태)
+    bar_width = 300  # 경험치 바의 전체 길이
+    bar_height = 40   # 경험치 바의 높이 (타원형의 세로 길이)
+    xp = 0  # 초기 XP 값
+    max_xp = 100  # 레벨업에 필요한 최대 XP
+    xp_ratio = xp / max_xp
+    fill_length = int(bar_width * xp_ratio)
+
+    # 경험치 바 배경 그리기 (빈 바)
+    draw.rounded_rectangle([50, 300, 50 + bar_width, 300 + bar_height], radius=bar_height//2, outline=(255, 255, 255), width=2)
+
+    # 경험치 바 채우기 (현재 XP)
+    if fill_length > 0:
+        draw.rounded_rectangle([50, 300, 50 + fill_length, 300 + bar_height], radius=bar_height//2, fill=(0, 255, 0))
+
+    # 프로필 사진 추가
+    background.paste(avatar_img, (50, 100), avatar_img)
+
+    # 이미지 파일로 저장
+    image_path = "output_image.png"
+    background.save(image_path)
+
+    # 이미지 Discord로 전송
+    channel = bot.get_channel(1275066691642064896)  # 이미지를 보낼 채널의 ID를 넣어야 함
+    with open(image_path, "rb") as file:
+        await channel.send(file=discord.File(file, "output_image.png"))
+
+# 유저가 메시지를 보낼 때 경험치 업데이트
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    user_id = message.author.id
+    username = message.author.name
+    
+    # 유저가 데이터베이스에 없으면 추가
+    c.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO users (user_id, username, level, xp) VALUES (?, ?, 1, 0)", (user_id, username))
+        conn.commit()
+
+    # 유저의 현재 경험치와 레벨을 가져옴
+    c.execute("SELECT xp, level FROM users WHERE user_id = ?", (user_id,))
+    result = c.fetchone()
+
+    if result:
+        xp, level = result
+        xp += 10  # 채팅당 10 XP 추가
+
+        # 레벨업에 필요한 경험치 계산 (레벨^2 * 100)
+        max_xp = 100 * (level ** 2)
+
+        # 레벨업 조건
+        if xp >= max_xp:
+            xp -= max_xp
+            level += 1
+            await message.channel.send(embed=discord.Embed(description=f"🎉 @{message.author.name} 님이 {level} 레벨이 되었습니다! 🎉"))
+
+        # 데이터베이스 업데이트
+        c.execute("UPDATE users SET xp = ?, level = ? WHERE user_id = ?", (xp, level, user_id))
+        conn.commit()
+
+    await bot.process_commands(message)
+
+@bot.slash_command(guild_ids=[1272185394162831421], name="경험치", description="현재 경험치와 레벨을 확인합니다.")
+async def 경험치(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
+
+    user_id = member.id
+    c.execute("SELECT xp, level FROM users WHERE user_id = ?", (user_id,))
+    result = c.fetchone()
+
+    if result:
+        xp, level = result
+        
+        # 프로필 사진 가져오기
+        avatar_url = member.avatar.url
+        response = requests.get(avatar_url)
+        avatar_img = Image.open(BytesIO(response.content)).convert("RGBA")
+        avatar_img = avatar_img.resize((100, 100))
+
+        mask = Image.new("L", avatar_img.size, 0)
+        draw_mask = ImageDraw.Draw(mask)
+        draw_mask.ellipse((0, 0, 100, 100), fill=255)  # 원형 마스크 그리기
+
+        avatar_img = ImageOps.fit(avatar_img, (100, 100), Image.LANCZOS)
+        avatar_img.putalpha(mask)
+
+        # 배경 이미지 불러오기
+        background = Image.open(BACKGROUND_PATH).convert("RGB")
+        draw = ImageDraw.Draw(background)
+        
+        # 글꼴 설정
+        font_large = ImageFont.truetype(FONT_PATH, 50)
+        font_small = ImageFont.truetype(FONT_PATH, 30)
+
+        # 상단 텍스트 추가 (레벨 및 경험치 정보)
+        draw.text((50, 20), f"{member.name}님의 현재 레벨", font=font_large, fill=(255, 255, 255))
+
+        # 유저 정보 텍스트 추가 (레벨 및 경험치)
+        draw.text((170, 120), f"Level: {level}", font=font_small, fill=(255, 255, 255))
+        draw.text((170, 160), f"XP: {xp}", font=font_small, fill=(255, 255, 255))
+
+        # 경험치 바 추가 (타원형 형태)
+        bar_width = 300  # 경험치 바의 전체 길이
+        bar_height = 40   # 경험치 바의 높이 (타원형의 세로 길이)
+        max_xp = 100 * (level ** 2)  # 레벨업에 필요한 최대 XP 계산
+        xp_ratio = xp / max_xp
+        fill_length = int(bar_width * xp_ratio)
+
+        # 경험치 바 배경 그리기 (빈 바)
+        draw.rounded_rectangle([50, 300, 50 + bar_width, 300 + bar_height], radius=bar_height//2, outline=(255, 255, 255), width=2)
+
+        # 경험치 바 채우기 (현재 XP)
+        if fill_length > 0:
+            draw.rounded_rectangle([50, 300, 50 + fill_length, 300 + bar_height], radius=bar_height//2, fill=(0, 255, 0))
+
+        # 프로필 사진 추가
+        background.paste(avatar_img, (50, 100), avatar_img)
+
+        # 이미지 파일로 저장
+        image_path = "output_image_xp.png"
+        background.save(image_path)
+
+        # 이미지 Discord로 전송
+        with open(image_path, "rb") as file:
+            await ctx.respond(file=discord.File(file, "output_image_xp.png"))
+
+    else:
+        await ctx.respond("데이터가 없습니다. 먼저 채팅을 쳐보세요!")
 
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
