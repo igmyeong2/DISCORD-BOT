@@ -136,7 +136,11 @@ class CannedFoodModal(Modal):
 
     async def callback(self, interaction: Interaction):
         response = self.children[0].value  # 유저가 입력한 값
-        await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+        if not response.isdigit():
+            await interaction.response.send_message("올바른 정수값을 입력해 주세요.", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+
 
 class ExperienceModal(Modal):
     def __init__(self):
@@ -145,7 +149,11 @@ class ExperienceModal(Modal):
 
     async def callback(self, interaction: Interaction):
         response = self.children[0].value  # 유저가 입력한 값
-        await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+        if not response.isdigit():
+            await interaction.response.send_message("올바른 정수값을 입력해 주세요.", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+
 
 class vending(View):
     def __init__(self):
