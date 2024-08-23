@@ -19,7 +19,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 required_role_id = 1274254529818263581
 
-source_channel_id = 1274640900701556746  # 메시지를 감지할 채널 ID
+source_channel_id = 1274640900701556746
 target_channel_id = 1274627424214192209
 
 FONT_PATH = "C:\\Users\\USER1\\Downloads\\DiscordBot\\saves\\LINESeedKR-Bd.ttf"
@@ -128,6 +128,20 @@ class perkView(View):
             )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+class vending(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+        b1 = Button(label='통조림', style=ButtonStyle.secondary)
+        b2 = Button(label='경험치', style=ButtonStyle.secondary)
+        b1.callback = self.button_callback
+        b2.callback = self.button_callback
+        self.add_item(b1)
+        self.add_item(b2)
+
+    async def button_callback(self, interaction: Interaction):
+        await interaction.respond('test')
         
 @bot.event
 async def on_ready():
@@ -387,7 +401,10 @@ async def 경험치(ctx, member: discord.Member = None):
 
 @bot.slash_command(guild_ids=[1272185394162831421], name="자판기", description="자판기를 생성합니다.")
 async def 자판기(ctx):
-    await ctx.respond('필요한 버튼을 눌러주세요.')
+    embed = discord.Embed(color=0x565656, title="")
+    embed.add_field(name="자판기", value="원하는 버튼을 눌러주세요.", inline=False)
+    embed.set_footer(text = "[!] 꼭 세이브 채널에서 세이브를 진행해주세요!")
+    await ctx.send(embed=embed, view=vending())
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
-bot.run('YOUR_TOKEN')
+bot.run('')
