@@ -5,7 +5,7 @@ import time
 import BCSFE_Python_Discord as BCSFE_Python
 from BCSFE_Python_Discord import *
 from BCSFE_Python_Discord import game_data_getter
-from discord.ui import View, Button
+from discord.ui import View, Button, Modal, InputText
 from discord import ButtonStyle, Interaction
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -129,24 +129,50 @@ class perkView(View):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+class CannedFoodModal(Modal):
+    def __init__(self):
+        super().__init__(title="통조림")
+        self.add_item(InputText(label="통조림", placeholder="통조림 갯수를 입력해 주세요."))
+
+    async def callback(self, interaction: Interaction):
+        response = self.children[0].value  # 유저가 입력한 값
+        await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+
+class ExperienceModal(Modal):
+    def __init__(self):
+        super().__init__(title="경험치")
+        self.add_item(InputText(label="경험치", placeholder="경험치 갯수를 입력해 주세요."))
+
+    async def callback(self, interaction: Interaction):
+        response = self.children[0].value  # 유저가 입력한 값
+        await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+
 class vending(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-        b1 = Button(label='통조림', style=ButtonStyle.secondary)
-        b2 = Button(label='경험치', style=ButtonStyle.secondary)
+        b1 = Button(label='통조림', style=ButtonStyle.secondary, custom_id='canned_food')
+        b2 = Button(label='경험치', style=ButtonStyle.secondary, custom_id='experience')
         b1.callback = self.button_callback
         b2.callback = self.button_callback
         self.add_item(b1)
         self.add_item(b2)
 
     async def button_callback(self, interaction: Interaction):
-        await interaction.respond('test')
+        button_label = interaction.data['custom_id']  # 눌린 버튼의 custom_id
+
+        if button_label == 'canned_food':
+            modal = CannedFoodModal()
+            await interaction.response.send_modal(modal)
+        elif button_label == 'experience':
+            modal = ExperienceModal()
+            await interaction.response.send_modal(modal)
         
 @bot.event
 async def on_ready():
     bot.add_view(PersistentView())
     bot.add_view(perkView())
+    bot.add_view(vending())
     print(f'봇이 로그인되었습니다. {bot.user}')
 
 @bot.event
@@ -400,11 +426,20 @@ async def 경험치(ctx, member: discord.Member = None):
         await ctx.respond("데이터가 없습니다. 먼저 채팅을 쳐보세요!")
 
 @bot.slash_command(guild_ids=[1272185394162831421], name="자판기", description="자판기를 생성합니다.")
+@commands.has_role(required_role_id)
 async def 자판기(ctx):
-    embed = discord.Embed(color=0x565656, title="")
-    embed.add_field(name="자판기", value="원하는 버튼을 눌러주세요.", inline=False)
-    embed.set_footer(text = "[!] 꼭 세이브 채널에서 세이브를 진행해주세요!")
-    await ctx.send(embed=embed, view=vending())
+        embed = discord.Embed(color=0x565656, title="")
+        embed.add_field(name="자판기", value="원하는 버튼을 눌러주세요.", inline=False)
+        embed.set_footer(text = "[!] 꼭 세이브 채널에서 세이브를 진행해주세요!")
+        await ctx.respond(embed=embed, view=vending())
+
+@자판기.error
+async def 자판기_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        embed = discord.Embed(color=0x565656)
+        embed.add_field(name="에러", value="이 명령어는 특정 역할이 있는 사용자만 사용 가능합니다.", inline=False)
+        embed.set_footer(text = "[!] 관리자 이신가요? 문의해주세요!")
+        await ctx.respond(embed=embed, ephemeral=True)
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
 bot.run('')
