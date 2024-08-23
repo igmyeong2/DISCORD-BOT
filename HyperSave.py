@@ -385,6 +385,9 @@ async def 경험치(ctx, member: discord.Member = None):
     else:
         await ctx.respond("데이터가 없습니다. 먼저 채팅을 쳐보세요!")
 
+@bot.slash_command(guild_ids=[1272185394162831421], name="자판기", description="자판기를 생성합니다.")
+async def 자판기(ctx):
+    await ctx.respond('필요한 버튼을 눌러주세요.')
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
 bot.run('YOUR_TOKEN')
