@@ -175,6 +175,34 @@ class vending(View):
         elif button_label == 'experience':
             modal = ExperienceModal()
             await interaction.response.send_modal(modal)
+
+class backupModal(Modal):
+    def __init__(self):
+        super().__init__(title="백업")
+        self.add_item(InputText(label="이어하기 코드", placeholder="이어하기 코드를 입력해주세요."))
+        self.add_item(InputText(label="인증 번호", placeholder="인증 번호를 입력해주세요."))
+        self.add_item(InputText(label="게임 버전", placeholder="게임 버전을 입력해주세요.(예:13.5.0)"))
+        self.add_item(InputText(label="게임판", placeholder="원하시는 게임판을 입력하여주세요.(예: 한국=kr)"))
+
+    async def callback(self, interaction: Interaction):
+        response = self.children[0].value  # 유저가 입력한 값
+        await interaction.response.send_message(f"DM을 확인해 주세요.", ephemeral=True)
+
+
+class backup(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+        b1 = Button(label='백업', style=ButtonStyle.secondary, custom_id='backup')
+        b1.callback = self.button_callback
+        self.add_item(b1)
+
+    async def button_callback(self, interaction: Interaction):
+        button_label = interaction.data['custom_id']  # 눌린 버튼의 custom_id
+
+        if button_label == 'backup':
+            modal = backupModal()
+            await interaction.response.send_modal(modal)
         
 @bot.event
 async def on_ready():
@@ -448,6 +476,24 @@ async def 자판기_error(ctx, error):
         embed.add_field(name="에러", value="이 명령어는 특정 역할이 있는 사용자만 사용 가능합니다.", inline=False)
         embed.set_footer(text = "[!] 관리자 이신가요? 문의해주세요!")
         await ctx.respond(embed=embed, ephemeral=True)
+
+@bot.slash_command(guild_ids=[1272185394162831421], name="백업", description="계정을 백업 할 수 있는 버튼을 생성합니다.")
+@commands.has_role(required_role_id)
+async def 백업(ctx):
+        embed = discord.Embed(color=0x565656, title="")
+        embed.add_field(name="백업", value="원하는 버튼을 눌러주세요.", inline=False)
+        embed.set_footer(text = "[!] 백업이 되지 않거나 오류가 있으면 문의 부탁드립니다.")
+        await ctx.respond(embed=embed, view=backup())
+
+@백업.error
+async def 백업_error(ctx, error):
+    if isinstance(error, commands.MissingRole):
+        embed = discord.Embed(color=0x565656)
+        embed.add_field(name="에러", value="이 명령어는 특정 역할이 있는 사용자만 사용 가능합니다.", inline=False)
+        embed.set_footer(text = "[!] 관리자 이신가요? 문의해주세요!")
+        await ctx.respond(embed=embed, ephemeral=True)
+        
+import time
 
 # 봇 실행 (토큰은 본인의 것으로 교체)
 bot.run('')
